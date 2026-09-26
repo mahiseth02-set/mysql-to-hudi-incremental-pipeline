@@ -2,7 +2,7 @@
 
 A production-style **PySpark** job that moves a busy MySQL OLTP table into an **Apache Hudi (Merge-on-Read)** lake table on HDFS/S3. It is incremental, idempotent and delete-aware.
 
-> Demo on dummy e-commerce data, modelled on pipelines I run in production, where they moved hundreds of millions of rows off MySQL and cut a daily batch from 16+ hours to about 1 hour. No company code or data is included.
+> A self-contained demo on dummy e-commerce data, showing the patterns I use for large MySQL-to-lake migrations. No proprietary code or data is included.
 
 ## What it does
 
@@ -29,7 +29,7 @@ flowchart LR
 
 ## Design decisions
 
-- **Merge-on-Read instead of Copy-on-Write.** Frequent small upserts go to log files instead of rewriting whole parquet files. In my production workload the same 1.2-lakh-row upsert took **46 min on COW and 5 min on MOR**.
+- **Merge-on-Read instead of Copy-on-Write.** Frequent small upserts go to log files instead of rewriting whole parquet files. For upsert-heavy tables this typically makes each incremental write many times faster, at the cost of periodic compaction.
 - **SIMPLE index.** The partition value comes from `created_at`, which never changes for a key, so a global index is not needed.
 - **The watermark is read as a string in the source's time zone.** This avoids silent JVM / JDBC-driver time-zone shifts, a real bug class when source servers run in IST and Spark runs in UTC.
 - **A `flock` in `run.sh`** stops overlapping cron runs.
